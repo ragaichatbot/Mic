@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MicStream Pro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080810;--c1:#0f0f1e;--c2:#16162a;--bdr:#1f1f38;
+  --cyan:#00d4ff;--green:#00ff88;--red:#ff3355;--yellow:#ffd600;
+  --txt:#dde2f0;--dim:#55659a;
+}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:system-ui,sans-serif;overflow-x:hidden}
+body{background:radial-gradient(ellipse at 20% 10%,rgba(0,212,255,.05),transparent 55%),radial-gradient(ellipse at 80% 90%,rgba(0,255,136,.04),transparent 55%),var(--bg)}
+
+#wrap{max-width:480px;margin:0 auto;padding:12px 12px 50px}
+
+/* ── HEADER ── */
+.hdr{display:flex;align-items:center;gap:10px;padding:14px 2px 10px}
+.logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#0088ff,#00ccff);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px rgba(0,200,255,.4)}
+.hdr h1{font-size:16px;font-weight:800;letter-spacing:3px;color:var(--cyan);text-shadow:0 0 8px rgba(0,212,255,.6)}
+.hdr p{font-size:10px;color:var(--dim);letter-spacing:1px;margin-top:1px}
+
+/* ── HTTPS BLOCKER ── */
+#httpsWall{display:none;background:rgba(255,211,0,.06);border:1px solid rgba(255,211,0,.25);border-radius:12px;padding:16px;margin-bottom:12px}
+#httpsWall h2{font-size:14px;color:var(--yellow);margin-bottom:8px}
+#httpsWall p{font-size:12px;color:#ccc;line-height:1.8;margin-bottom:6px}
+#httpsWall code{background:rgba(255,255,255,.08);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--cyan)}
+
+/* ── PERM CARD ── */
+#permCard{background:var(--c1);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px}
+.clabel{font-size:9px;color:var(--dim);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.clabel::after{content:'';flex:1;height:1px;background:var(--bdr)}
+#permMsg{font-size:13px;line-height:1.8;margin-bottom:10px}
+#permMsg b{color:var(--cyan)}
+#grantBtn{display:none;width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#0066ff,#00aaff);color:#fff;font-weight:800;font-size:13px;letter-spacing:2px;cursor:pointer;box-shadow:0 0 18px rgba(0,150,255,.35)}
+#grantBtn:active{transform:scale(.97)}
+#deniedSteps{display:none;margin-top:10px;background:rgba(255,51,85,.06);border:1px solid rgba(255,51,85,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:#ff9aaa;line-height:1.9}
+
+/* ── STATUS ROW ── */
+.srow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.sc{background:var(--c1);border:1px solid var(--bdr);border-radius:10px;padding:8px 10px}
+.sc-l{font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.sc-v{font-size:12px;font-family:monospace}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dim);margin-right:4px;transition:all .3s}
+.dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot.err{background:var(--red);box-shadow:0 0 6px var(--red)}
+
+/* ── VU ── */
+.vu{background:var(--c1);border:1px solid var(--bdr);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.vu-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.vu-row:last-child{margin-bottom:0}
+.vu-l{font-size:10px;color:var(--dim);font-family:monospace;width:22px}
+.vu-bg{flex:1;height:12px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden}
+.vu-bar{height:100%;width:0;border-radius:4px;transition:width .04s linear;background:linear-gradient(90deg,var(--green) 60%,var(--yellow) 78%,var(--red) 92%)}
+.vu-db{font-size:10px;font-family:monospace;color:var(--dim);width:42px;text-align:right}
+
+/* ── MAIN BTN ── */
+.btnwrap{display:flex;justify-content:center;margin:14px 0}
+#mainBtn{width:120px;height:120px;border-radius:50%;border:none;cursor:pointer;color:#fff;font-weight:800;font-size:11px;letter-spacing:2px;position:relative;outline:none;
+  background:conic-gradient(from 180deg,#003fa0,#006aff,#00b4ff,#006aff,#003fa0);
+  box-shadow:0 0 28px rgba(0,120,255,.4),0 0 55px rgba(0,120,255,.12);
+  transition:transform .12s,box-shadow .25s}
+#mainBtn:active{transform:scale(.95)}
+#mainBtn.running{background:conic-gradient(from 180deg,#003d20,#00a844,#00ff88,#00a844,#003d20);box-shadow:0 0 28px rgba(0,255,136,.45),0 0 55px rgba(0,255,136,.15);animation:pulse 2s ease-in-out infinite}
+#mainBtn.err{background:conic-gradient(from 180deg,#440000,#aa1122,#ff3355,#aa1122,#440000);box-shadow:0 0 28px rgba(255,50,80,.4)}
+@keyframes pulse{0%,100%{box-shadow:0 0 28px rgba(0,255,136,.45),0 0 55px rgba(0,255,136,.15)}50%{box-shadow:0 0 42px rgba(0,255,136,.7),0 0 80px rgba(0,255,136,.25)}}
+.ring{position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(0,200,255,.25);animation:spin 7s linear infinite;pointer-events:none}
+.ring2{position:absolute;inset:-16px;border-radius:50%;border:1px solid rgba(0,200,255,.12);animation:spin 13s linear infinite reverse;pointer-events:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+#btnLabel{position:relative;z-index:1;pointer-events:none;line-height:1.5}
+
+/* ── CARD ── */
+.card{background:var(--c1);border:1px solid var(--bdr);border-radius:12px;padding:14px;margin-bottom:10px}
+
+/* ── DEVICE ── */
+.drow{display:flex;gap:8px}
+select{flex:1;background:var(--c2);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:9px 10px;font-size:13px;outline:none;appearance:none}
+select:focus{border-color:var(--cyan)}
+.sbtn{background:var(--c2);border:1px solid var(--bdr);border-radius:8px;padding:9px 12px;color:var(--dim);font-size:12px;cursor:pointer;white-space:nowrap}
+.sbtn:hover{color:var(--cyan);border-color:var(--cyan)}
+.dnote{font-size:10px;color:var(--dim);margin-top:7px;line-height:1.6}
+
+/* ── SLIDERS ── */
+.srow2{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.srow2:last-child{margin-bottom:0}
+.slbl{font-size:11px;color:var(--dim);width:80px}
+input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:var(--c2);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px rgba(0,212,255,.4);cursor:pointer}
+.sval{font-size:11px;font-family:monospace;color:var(--cyan);width:40px;text-align:right}
+
+/* ── EQ ── */
+.eqg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.eqi{display:flex;flex-direction:column;align-items:center;gap:5px}
+.eql{font-size:9px;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+input.eqk[type=range]{writing-mode:bt-lr;-webkit-appearance:slider-vertical;width:26px;height:75px}
+.eqv{font-size:11px;font-family:monospace;color:var(--cyan)}
+
+/* ── TOGGLES ── */
+.trow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bdr)}
+.trow:last-child{border-bottom:none;padding-bottom:0}
+.tlbl{font-size:12px}
+.tsub{font-size:10px;color:var(--dim);margin-top:1px}
+.sw{position:relative;width:42px;height:23px;flex-shrink:0}
+.sw input{opacity:0;position:absolute;width:0;height:0}
+.sw span{position:absolute;inset:0;background:var(--c2);border-radius:12px;cursor:pointer;transition:background .2s}
+.sw span::after{content:'';position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked+span{background:var(--cyan)}
+.sw input:checked+span::after{transform:translateX(19px)}
+
+/* ── FX GRID ── */
+.fxg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+.fxb{background:var(--c2);border:1px solid var(--bdr);border-radius:10px;padding:9px 5px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:all .18s;user-select:none}
+.fxb:active{transform:scale(.95)}
+.fxb.on{background:rgba(0,212,255,.07);border-color:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,.18)}
+.fxi{font-size:18px}
+.fxn{font-size:9px;color:var(--dim);letter-spacing:.7px;text-transform:uppercase;text-align:center}
+.fxb.on .fxn{color:var(--cyan)}
+
+/* ── COLLAPSIBLE ── */
+.coll{cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.colla{color:var(--dim);font-size:11px;transition:transform .2s}
+.coll.open .colla{transform:rotate(180deg)}
+.collb{display:none;padding-top:10px}
+.collb.open{display:block}
+
+/* ── TOAST ── */
+#toast{display:none;background:rgba(255,51,85,.1);border:1px solid rgba(255,51,85,.25);border-radius:10px;padding:10px 13px;margin-bottom:10px;font-size:12px;color:#ff9aaa;line-height:1.7}
+#toast.show{display:block}
+
+/* ── TIPS ── */
+.tip{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:8px;padding:10px;margin-top:6px;font-size:11px;color:var(--dim);line-height:1.8}
+.tip b{color:var(--cyan)}
+
+/* ── FX PARAMS ── */
+#fxParams{display:none}
+#fxParams.show{display:block}
+
+/* ── FOOTER ── */
+.ft{text-align:center;padding:16px 0;font-size:10px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div id="wrap">
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo">🎙</div>
+  <div>
+    <h1>MICSTREAM PRO</h1>
+    <p>MOBILE STUDIO MONITOR</p>
+  </div>
+</div>
+
+<!-- HTTPS BLOCKER (shown only on file://) -->
+<div id="httpsWall">
+  <h2>⚠️ Cannot run from a local file</h2>
+  <p>Chrome blocks microphone on <code>file://</code> pages. You need to host this on HTTPS.</p>
+  <p><b>Easiest free option — GitHub Pages (2 mins):</b></p>
+  <p>1. Go to <code>github.com</code> → New repository → name it anything</p>
+  <p>2. Upload this <code>micstream.html</code> → rename it to <code>index.html</code></p>
+  <p>3. Settings → Pages → Branch: main → Save</p>
+  <p>4. Open <code>https://yourusername.github.io/reponame</code> on your phone</p>
+  <p style="margin-top:8px;color:#aaa">Or use <code>netlify.com/drop</code> — drag the file in, get an HTTPS link instantly.</p>
+</div>
+
+<!-- PERMISSION CARD -->
+<div class="card" id="permCard">
+  <div class="clabel">Microphone Permission</div>
+  <div id="permMsg"></div>
+  <button id="grantBtn" onclick="grantMic()">🎙 ALLOW MICROPHONE</button>
+  <div id="deniedSteps"></div>
+</div>
+
+<!-- STATUS -->
+<div class="srow">
+  <div class="sc"><div class="sc-l">Status</div><div class="sc-v"><span class="dot" id="dot"></span><span id="stxt">Idle</span></div></div>
+  <div class="sc"><div class="sc-l">Latency</div><div class="sc-v" id="latV" style="color:var(--cyan)">--</div></div>
+  <div class="sc"><div class="sc-l">Output</div><div class="sc-v" id="outV" style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Default</div></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- VU METER -->
+<div class="vu">
+  <div style="font-size:9px;color:var(--dim);letter-spacing:1.5px;margin-bottom:7px">SIGNAL LEVEL</div>
+  <div class="vu-row"><div class="vu-l">IN</div><div class="vu-bg"><div class="vu-bar" id="vuIn"></div></div><div class="vu-db" id="dbIn">— dB</div></div>
+  <div class="vu-row"><div class="vu-l">OUT</div><div class="vu-bg"><div class="vu-bar" id="vuOut"></div></div><div class="vu-db" id="dbOut">— dB</div></div>
+</div>
+
+<!-- MAIN BUTTON -->
+<div class="btnwrap">
+  <button id="mainBtn" onclick="toggle()">
+    <div class="ring"></div><div class="ring2"></div>
+    <span id="btnLabel">TAP TO<br>START</span>
+  </button>
+</div>
+
+<!-- OUTPUT DEVICE -->
+<div class="card">
+  <div class="clabel">Output Device</div>
+  <div class="drow">
+    <select id="outSel"><option value="">System Default</option></select>
+    <button class="sbtn" onclick="scanDevices()">↺ Scan</button>
+  </div>
+  <div class="dnote" id="dnote">Connect Bluetooth speaker first, then tap Scan.</div>
+</div>
+
+<!-- GAIN -->
+<div class="card">
+  <div class="clabel">Gain</div>
+  <div class="srow2">
+    <div class="slbl">🎙 Mic Input</div>
+    <input type="range" id="inGain" min="0" max="300" value="100" oninput="setGain(this,'in')">
+    <div class="sval" id="inGainV">1.0×</div>
+  </div>
+  <div class="srow2">
+    <div class="slbl">🔊 Output</div>
+    <input type="range" id="outGain" min="0" max="200" value="90" oninput="setGain(this,'out')">
+    <div class="sval" id="outGainV">0.9×</div>
+  </div>
+</div>
+
+<!-- EQ -->
+<div class="card">
+  <div class="clabel">3-Band EQ</div>
+  <div class="eqg">
+    <div class="eqi"><div class="eql">Bass</div><input class="eqk" type="range" id="eqB" min="-15" max="15" value="0" oninput="setEQ(this,'B')"><div class="eqv" id="eqBv">0dB</div></div>
+    <div class="eqi"><div class="eql">Mid</div><input class="eqk" type="range" id="eqM" min="-15" max="15" value="0" oninput="setEQ(this,'M')"><div class="eqv" id="eqMv">0dB</div></div>
+    <div class="eqi"><div class="eql">Treble</div><input class="eqk" type="range" id="eqH" min="-15" max="15" value="0" oninput="setEQ(this,'H')"><div class="eqv" id="eqHv">0dB</div></div>
+  </div>
+</div>
+
+<!-- DYNAMICS -->
+<div class="card">
+  <div class="clabel">Dynamics</div>
+  <div class="trow">
+    <div><div class="tlbl">Compressor</div><div class="tsub">Auto-level, prevents clipping</div></div>
+    <label class="sw"><input type="checkbox" id="compOn" checked onchange="applyComp()"><span></span></label>
+  </div>
+  <div class="srow2" style="margin-top:10px;margin-bottom:0">
+    <div class="slbl">Threshold</div>
+    <input type="range" id="compThr" min="-60" max="0" value="-24" oninput="applyComp()">
+    <div class="sval" id="compThrV">-24dB</div>
+  </div>
+  <div class="trow" style="margin-top:8px">
+    <div><div class="tlbl">Noise Gate</div><div class="tsub">Cuts hiss &amp; background noise</div></div>
+    <label class="sw"><input type="checkbox" id="gateOn" onchange="applyGate()"><span></span></label>
+  </div>
+  <div class="srow2" style="margin-top:10px;margin-bottom:0">
+    <div class="slbl">Gate Level</div>
+    <input type="range" id="gateThr" min="0" max="100" value="2" oninput="applyGate()">
+    <div class="sval" id="gateThrV">2%</div>
+  </div>
+</div>
+
+<!-- EFFECTS -->
+<div class="card">
+  <div class="clabel">Effects &amp; Presets</div>
+  <div class="fxg">
+    <div class="fxb on" data-fx="clean"      onclick="pickFX(this)"><div class="fxi">🎚</div><div class="fxn">Clean</div></div>
+    <div class="fxb"    data-fx="studio"     onclick="pickFX(this)"><div class="fxi">🎛</div><div class="fxn">Studio</div></div>
+    <div class="fxb"    data-fx="hall"       onclick="pickFX(this)"><div class="fxi">🏛</div><div class="fxn">Hall</div></div>
+    <div class="fxb"    data-fx="room"       onclick="pickFX(this)"><div class="fxi">🪟</div><div class="fxn">Room</div></div>
+    <div class="fxb"    data-fx="cathedral"  onclick="pickFX(this)"><div class="fxi">⛪</div><div class="fxn">Cathedral</div></div>
+    <div class="fxb"    data-fx="echo"       onclick="pickFX(this)"><div class="fxi">🔄</div><div class="fxn">Echo</div></div>
+    <div class="fxb"    data-fx="telephone"  onclick="pickFX(this)"><div class="fxi">📞</div><div class="fxn">Phone</div></div>
+    <div class="fxb"    data-fx="megaphone"  onclick="pickFX(this)"><div class="fxi">📢</div><div class="fxn">Mega</div></div>
+    <div class="fxb"    data-fx="robot"      onclick="pickFX(this)"><div class="fxi">🤖</div><div class="fxn">Robot</div></div>
+    <div class="fxb"    data-fx="lofi"       onclick="pickFX(this)"><div class="fxi">📻</div><div class="fxn">Lo-Fi</div></div>
+  </div>
+  <div class="srow2" style="margin-bottom:0">
+    <div class="slbl">Wet Mix</div>
+    <input type="range" id="wetR" min="0" max="100" value="60" oninput="setWet(this)">
+    <div class="sval" id="wetV">60%</div>
+  </div>
+</div>
+
+<!-- FX PARAMS -->
+<div class="card" id="fxParams">
+  <div class="clabel" id="fxParamsLbl">Effect Params</div>
+  <div id="fxParamsBody"></div>
+</div>
+
+<!-- AUDIO SOURCE -->
+<div class="card">
+  <div class="clabel coll" onclick="toggleColl(this)">Audio Source <span class="colla">▼</span></div>
+  <div class="collb">
+    <div class="trow"><div><div class="tlbl">Echo Cancellation</div><div class="tsub">Disable for Bluetooth use</div></div><label class="sw"><input type="checkbox" id="echoCx" onchange="restartIfLive()"><span></span></label></div>
+    <div class="trow"><div><div class="tlbl">Noise Suppression</div><div class="tsub">OS-level noise removal</div></div><label class="sw"><input type="checkbox" id="noiseCx" onchange="restartIfLive()"><span></span></label></div>
+    <div class="trow"><div><div class="tlbl">Auto Gain Control</div><div class="tsub">OS auto mic level</div></div><label class="sw"><input type="checkbox" id="agcCx" onchange="restartIfLive()"><span></span></label></div>
+  </div>
+</div>
+
+<!-- BT GUIDE -->
+<div class="card">
+  <div class="clabel coll" onclick="toggleColl(this)">Bluetooth &amp; Setup <span class="colla">▼</span></div>
+  <div class="collb">
+    <div class="tip">
+      <b>Step 1:</b> Pair BT speaker in phone Settings → Bluetooth<br>
+      <b>Step 2:</b> Tap ↺ Scan, select your speaker from the dropdown<br>
+      <b>Step 3:</b> Tap the big Start button<br><br>
+      <b>⚠️ BT latency:</b> 80–200ms hardware delay is unavoidable with A2DP Bluetooth. This app minimises software latency. For zero latency use a USB-C→3.5mm cable.
+    </div>
+  </div>
+</div>
+
+<div class="ft">MicStream Pro — Works on GitHub Pages &amp; Netlify (HTTPS)</div>
+</div>
+
+<script>
+'use strict';
+
+// ── WORKLET SOURCE (inlined) ──────────────────────────────────────
+const WK = `
+class GateProc extends AudioWorkletProcessor {
+  static get parameterDescriptors(){return[{name:'thr',defaultValue:0.02,minValue:0,maxValue:1}]}
+  constructor(){super();this._g=0;}
+  process(i,o,p){
+    const ic=i[0]&&i[0][0];const oc=o[0]&&o[0][0];
+    if(!ic||!oc)return true;
+    for(let n=0;n<oc.length;n++){
+      const t=p.thr.length>1?p.thr[n]:p.thr[0];
+      const a=Math.abs(ic[n]);
+      this._g=a>t?Math.min(1,this._g+0.004):Math.max(0,this._g-0.0006);
+      oc[n]=ic[n]*this._g;
+    }
+    return true;
+  }
+}
+class CrushProc extends AudioWorkletProcessor {
+  static get parameterDescriptors(){return[{name:'bits',defaultValue:6,minValue:1,maxValue:16},{name:'red',defaultValue:4,minValue:1,maxValue:32}]}
+  constructor(){super();this._l=0;this._c=0;}
+  process(i,o,p){
+    const ic=i[0]&&i[0][0];const oc=o[0]&&o[0][0];
+    if(!ic||!oc)return true;
+    for(let n=0;n<oc.length;n++){
+      const b=p.bits.length>1?p.bits[n]:p.bits[0];
+      const r=Math.round(p.red.length>1?p.red[n]:p.red[0]);
+      const s=Math.pow(2,Math.floor(b));
+      if(++this._c>=r){this._c=0;this._l=Math.round(ic[n]*s)/s;}
+      oc[n]=this._l;
+    }
+    return true;
+  }
+}
+registerProcessor('gate-proc',GateProc);
+registerProcessor('crush-proc',CrushProc);
+`;
+
+// ── STATE ────────────────────────────────────────────────────────
+let ctx, src, stream;
+let nd = {};            // named nodes
+let live = false;
+let wkLoaded = false;
+let raf;
+let curFX = 'clean';
+let irBufs = {};
+let latTxt = '--';
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (location.protocol === 'file:') {
+    document.getElementById('httpsWall').style.display = 'block';
+    document.getElementById('permCard').style.display = 'none';
+    document.getElementById('mainBtn').disabled = true;
+    document.getElementById('mainBtn').style.opacity = '.35';
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showPermBtn('⚠️ Browser not supported. Use Chrome (Android) or Safari (iPhone).', false);
+    return;
+  }
+  // ALWAYS show the button immediately — no async hang
+  showPermBtn('🎙 Tap below to allow your microphone. Your browser will ask for permission.', true);
+  // Then silently check if already granted (updates UI without blocking)
+  checkPermSilent();
+});
+
+// Resume AudioContext on any user tap (critical for iOS)
+document.addEventListener('touchstart', resumeCtx, {passive:true});
+document.addEventListener('click',      resumeCtx, {passive:true});
+async function resumeCtx(){ if(ctx && ctx.state==='suspended') try{await ctx.resume();}catch(e){} }
+
+// Wake lock
+let wl = null;
+async function grabWakeLock(){ try{ if('wakeLock' in navigator){ wl=await navigator.wakeLock.request('screen'); wl.addEventListener('release',()=>{wl=null;}); } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&live) resumeCtx(); });
+
+// ── PERMISSION ───────────────────────────────────────────────────
+// Never await this — just updates UI in background if Permissions API works
+function checkPermSilent() {
+  if (!navigator.permissions?.query) return;
+  // Use .then() not await — never blocks page load
+  navigator.permissions.query({name:'microphone'}).then(r => {
+    if (r.state === 'granted') showGranted();
+    else if (r.state === 'denied') showDenied();
+    // else: stay on prompt (button already showing)
+    r.addEventListener('change', () => {
+      if (r.state === 'granted') showGranted();
+      else if (r.state === 'denied') showDenied();
+      else showPermBtn('🎙 Tap below to allow your microphone.', true);
+    });
+  }).catch(() => {}); // swallow — some browsers throw on microphone query
+}
+
+function showPermBtn(msg, showBtn) {
+  const el = document.getElementById('permMsg');
+  el.innerHTML = msg;
+  el.style.color = 'var(--dim)';
+  document.getElementById('grantBtn').style.display = showBtn ? 'block' : 'none';
+  document.getElementById('deniedSteps').style.display = 'none';
+  document.getElementById('permCard').style.borderColor = 'rgba(0,212,255,.2)';
+}
+
+function showGranted() {
+  const card = document.getElementById('permCard');
+  const el = document.getElementById('permMsg');
+  el.innerHTML = '✅ <b style="color:var(--green)">Microphone allowed!</b> Tap the big button to Start.';
+  el.style.color = 'var(--green)';
+  document.getElementById('grantBtn').style.display = 'none';
+  document.getElementById('deniedSteps').style.display = 'none';
+  card.style.borderColor = 'rgba(0,255,136,.3)';
+  setTimeout(() => { card.style.display = 'none'; }, 2000);
+}
+
+function showDenied() {
+  const card = document.getElementById('permCard');
+  const el = document.getElementById('permMsg');
+  el.innerHTML = '🔒 <b style="color:var(--red)">Mic was blocked.</b> You need to reset it in browser settings:';
+  el.style.color = '#ff9aaa';
+  document.getElementById('grantBtn').style.display = 'none';
+  card.style.borderColor = 'rgba(255,51,85,.3)';
+  const ua = navigator.userAgent.toLowerCase();
+  const ios = /iphone|ipad/.test(ua);
+  const android = /android/.test(ua);
+  const help = document.getElementById('deniedSteps');
+  help.style.display = 'block';
+  help.innerHTML = ios
+    ? '📱 <b>iPhone/iPad:</b> Settings → Safari → Microphone → Allow → reload this page'
+    : android
+    ? '📱 <b>Android Chrome:</b><br>1. Tap the 🔒 lock icon in Chrome address bar<br>2. Tap "Site settings"<br>3. Tap "Microphone" → Allow<br>4. Reload this page'
+    : '💻 <b>Desktop:</b> Click 🔒 in address bar → Site settings → Microphone → Allow → reload page';
+}
+
+function applyPermState(state) {
+  if (state === 'granted') showGranted();
+  else if (state === 'denied') showDenied();
+  else showPermBtn('🎙 Tap below to allow your microphone.', true);
+}
+
+function setPermMsg(type, html) {
+  const el = document.getElementById('permMsg');
+  el.innerHTML = html;
+  el.style.color = type==='ok' ? 'var(--green)' : type==='err' ? '#ff9aaa' : 'var(--dim)';
+}
+
+async function grantMic() {
+  const btn = document.getElementById('grantBtn');
+  btn.textContent = '⏳ Waiting…';
+  btn.disabled = true;
+  try {
+    // Bare minimum — always triggers the browser popup
+    const ts = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+    ts.getTracks().forEach(t=>t.stop());
+    applyPermState('granted');
+    hideToast();
+  } catch(e) {
+    btn.textContent = '🎙 ALLOW MICROPHONE';
+    btn.disabled = false;
+    if (e.name === 'NotAllowedError') applyPermState('denied');
+    else if (e.name === 'NotFoundError') {
+      setPermMsg('err','⚠️ No microphone found on this device.');
+      document.getElementById('grantBtn').style.display = 'none';
+    } else {
+      setPermMsg('ask', '⚠️ ' + (e.message||'Try again.'));
+    }
+  }
+}
+
+// ── AUDIO CONTEXT ────────────────────────────────────────────────
+async function initCtx() {
+  if (ctx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC({latencyHint:'interactive', sampleRate:44100});
+  if (ctx.state === 'suspended') await ctx.resume();
+  try {
+    const blob = new Blob([WK], {type:'application/javascript'});
+    const url  = URL.createObjectURL(blob);
+    await ctx.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url);
+    wkLoaded = true;
+  } catch(e) { wkLoaded = false; }
+  buildGraph();
+  await buildIRs();
+}
+
+// ── AUDIO GRAPH ──────────────────────────────────────────────────
+function buildGraph() {
+  nd.inGain   = ctx.createGain(); nd.inGain.gain.value = 1.0;
+  nd.hpf      = ctx.createBiquadFilter(); nd.hpf.type='highpass'; nd.hpf.frequency.value=60;
+  nd.gate     = wkLoaded ? new AudioWorkletNode(ctx,'gate-proc',{numberOfOutputs:1,outputChannelCount:[1]}) : mkGain(1);
+  nd.eqB      = mkFilter('lowshelf',200,0);
+  nd.eqM      = mkFilter('peaking',1200,0); nd.eqM.Q.value=0.8;
+  nd.eqH      = mkFilter('highshelf',4500,0);
+  nd.comp     = ctx.createDynamicsCompressor();
+  nd.comp.threshold.value=-24; nd.comp.knee.value=10; nd.comp.ratio.value=4;
+  nd.comp.attack.value=0.005; nd.comp.release.value=0.1;
+  nd.dry      = mkGain(0.4);
+  nd.wetSend  = mkGain(1.0);
+  nd.wetRet   = mkGain(0.6);
+  nd.master   = mkGain(0.9);
+  nd.lim      = ctx.createDynamicsCompressor();
+  nd.lim.threshold.value=-1; nd.lim.knee.value=0; nd.lim.ratio.value=20;
+  nd.lim.attack.value=0.001; nd.lim.release.value=0.05;
+  nd.anaIn    = mkAna(); nd.anaOut = mkAna();
+  buildFXGraph('clean');
+  watchDeviceChanges();
+}
+
+function mkGain(v=1){ const g=ctx.createGain(); g.gain.value=v; return g; }
+function mkFilter(type,freq,gain){ const f=ctx.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.gain.value=gain; return f; }
+function mkAna(){ const a=ctx.createAnalyser(); a.fftSize=256; a.smoothingTimeConstant=0.7; return a; }
+
+function buildFXGraph(fx) {
+  // Tear down old FX
+  [nd.fxIn, nd.fxOut].forEach(n=>{ if(n) try{n.disconnect();}catch(e){} });
+  (nd.fxNodes||[]).forEach(n=>{ try{n.disconnect();}catch(e){}; try{if(n.stop)n.stop(0);}catch(e){}; });
+  nd.fxIn = mkGain(1); nd.fxOut = mkGain(1); nd.fxNodes = [];
+  nd._delay=null; nd._fb=null; nd._osc=null; nd._crush=null;
+
+  switch(fx) {
+    case 'clean':
+      nd.fxIn.connect(nd.fxOut); break;
+
+    case 'studio': case 'hall': case 'room': case 'cathedral': {
+      const conv = ctx.createConvolver();
+      if (irBufs[fx]) conv.buffer = irBufs[fx];
+      const hi = mkFilter('highshelf',5000, fx==='studio'?2.5:0);
+      nd.fxIn.connect(hi); hi.connect(conv); conv.connect(nd.fxOut);
+      nd.fxNodes.push(conv,hi);
+      break;
+    }
+    case 'echo': {
+      const del=ctx.createDelay(2); del.delayTime.value=0.35;
+      const fb=mkGain(0.45);
+      const lp=mkFilter('lowpass',4000,0);
+      nd.fxIn.connect(del); del.connect(lp); lp.connect(fb); fb.connect(del); del.connect(nd.fxOut);
+      nd.fxNodes.push(del,fb,lp); nd._delay=del; nd._fb=fb;
+      break;
+    }
+    case 'telephone': {
+      const hp=mkFilter('highpass',300,0); hp.Q.value=0.8;
+      const lp=mkFilter('lowpass',3400,0); lp.Q.value=0.8;
+      const ws=ctx.createWaveShaper(); ws.curve=curve_tanh(2.5); ws.oversample='4x';
+      const g=mkGain(2);
+      nd.fxIn.connect(hp); hp.connect(lp); lp.connect(g); g.connect(ws); ws.connect(nd.fxOut);
+      nd.fxNodes.push(hp,lp,g,ws);
+      break;
+    }
+    case 'megaphone': {
+      const hp=mkFilter('highpass',600,0);
+      const lp=mkFilter('lowpass',7000,0);
+      const g=mkGain(4);
+      const ws=ctx.createWaveShaper(); ws.curve=curve_soft(100); ws.oversample='4x';
+      const pg=mkGain(0.35);
+      nd.fxIn.connect(hp); hp.connect(lp); lp.connect(g); g.connect(ws); ws.connect(pg); pg.connect(nd.fxOut);
+      nd.fxNodes.push(hp,lp,g,ws,pg);
+      break;
+    }
+    case 'robot': {
+      const osc=ctx.createOscillator(); osc.frequency.value=60; osc.start();
+      const rg=mkGain(0);
+      const dc=mkFilter('highpass',5,0);
+      osc.connect(rg.gain); nd.fxIn.connect(rg); rg.connect(dc); dc.connect(nd.fxOut);
+      nd.fxNodes.push(osc,rg,dc); nd._osc=osc;
+      break;
+    }
+    case 'lofi': {
+      if (wkLoaded) {
+        const cr=new AudioWorkletNode(ctx,'crush-proc',{numberOfOutputs:1,outputChannelCount:[1]});
+        cr.parameters.get('bits').value=6; cr.parameters.get('red').value=5;
+        const lp=mkFilter('lowpass',5000,0);
+        nd.fxIn.connect(cr); cr.connect(lp); lp.connect(nd.fxOut);
+        nd.fxNodes.push(cr,lp); nd._crush=cr;
+      } else {
+        const ws=ctx.createWaveShaper(); ws.curve=curve_quant(5);
+        const lp=mkFilter('lowpass',4000,0);
+        nd.fxIn.connect(ws); ws.connect(lp); lp.connect(nd.fxOut);
+        nd.fxNodes.push(ws,lp);
+      }
+      break;
+    }
+    default: nd.fxIn.connect(nd.fxOut);
+  }
+  curFX = fx;
+}
+
+function curve_tanh(k){ const c=new Float32Array(512); for(let i=0;i<512;i++){const x=(i*2/512)-1;c[i]=Math.tanh(x*k)*.9;} return c; }
+function curve_soft(k){ const c=new Float32Array(512); for(let i=0;i<512;i++){const x=(i*2/512)-1;c[i]=((Math.PI+k)*x)/(Math.PI+k*Math.abs(x));} return c; }
+function curve_quant(bits){ const c=new Float32Array(512),s=Math.pow(2,bits); for(let i=0;i<512;i++){const x=(i*2/512)-1;c[i]=Math.round(x*s)/s;} return c; }
+
+function connectAll() {
+  if (!src) return;
+  src.connect(nd.anaIn); src.connect(nd.inGain);
+  nd.inGain.connect(nd.hpf); nd.hpf.connect(nd.gate);
+  nd.gate.connect(nd.eqB); nd.eqB.connect(nd.eqM); nd.eqM.connect(nd.eqH); nd.eqH.connect(nd.comp);
+  nd.comp.connect(nd.dry); nd.dry.connect(nd.master);
+  nd.comp.connect(nd.wetSend); nd.wetSend.connect(nd.fxIn); nd.fxOut.connect(nd.wetRet); nd.wetRet.connect(nd.master);
+  nd.master.connect(nd.lim); nd.lim.connect(nd.anaOut); nd.lim.connect(ctx.destination);
+}
+
+function disconnectAll() {
+  if (!src) return;
+  try{ src.disconnect(); } catch(e){}
+  Object.values(nd).forEach(n=>{ if(n&&typeof n.disconnect==='function') try{n.disconnect();}catch(e){} });
+}
+
+// ── REVERB IRS ───────────────────────────────────────────────────
+const IR_CFG = {
+  studio:    {dur:1.8,  decay:2.8, pd:0.012, ea:0.7},
+  hall:      {dur:3.5,  decay:2.0, pd:0.035, ea:0.4},
+  room:      {dur:0.5,  decay:4.5, pd:0.004, ea:0.9},
+  cathedral: {dur:7.0,  decay:1.4, pd:0.055, ea:0.25},
+};
+async function buildIRs() {
+  return new Promise(res => setTimeout(()=>{
+    for(const [name,c] of Object.entries(IR_CFG)){
+      const sr=ctx.sampleRate, pL=Math.floor(sr*c.pd), tL=Math.floor(sr*c.dur)+pL;
+      const buf=ctx.createBuffer(2,tL,sr);
+      for(let ch=0;ch<2;ch++){
+        const d=buf.getChannelData(ch);
+        const erEnd=pL+Math.floor(sr*0.08);
+        for(let i=pL;i<erEnd&&i<tL;i++) if(Math.random()<c.ea*0.08) d[i]=(Math.random()*2-1)*(0.9-(i-pL)/(erEnd-pL)*0.6);
+        for(let i=pL;i<tL;i++) d[i]+=(Math.random()*2-1)*Math.exp(-c.decay*(i-pL)/(tL-pL)*3);
+        let mx=0; for(let i=0;i<tL;i++) if(Math.abs(d[i])>mx)mx=Math.abs(d[i]);
+        if(mx>0){const n=0.85/mx;for(let i=0;i<tL;i++)d[i]*=n;}
+      }
+      irBufs[name]=buf;
+    }
+    res();
+  }, 50));
+}
+
+// ── STREAM START/STOP ────────────────────────────────────────────
+let deviceChangeDebounce = null;
+
+// Watch for BT connect/disconnect events
+function watchDeviceChanges() {
+  if (!navigator.mediaDevices) return;
+  navigator.mediaDevices.addEventListener('devicechange', () => {
+    // Debounce — BT reconnect fires multiple events in quick succession
+    clearTimeout(deviceChangeDebounce);
+    deviceChangeDebounce = setTimeout(async () => {
+      if (!live) return;
+      // Silently restart to pick up new device routing
+      showToast('🔄 Audio device changed — reconnecting…');
+      try {
+        await stopStream();
+        // Wait 800ms for BT to fully settle and stop its beep sounds
+        await sleep(800);
+        await startStream();
+        hideToast();
+      } catch(e) {
+        showToast('⚠️ Reconnect failed: ' + (e.message||'Try stopping and starting again.'));
+        const btn=document.getElementById('mainBtn');
+        btn.className='err';
+        document.getElementById('btnLabel').innerHTML='ERROR<br>RETRY';
+        setSt('err','Error');
+      }
+    }, 600);
+  });
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function startStream() {
+  await initCtx();
+  if (ctx.state==='suspended') await ctx.resume();
+
+  // Mute output immediately — prevents BT connection beep from looping back
+  nd.master.gain.setValueAtTime(0, ctx.currentTime);
+
+  // 3-stage fallback — never use latency constraint (breaks mobile Chrome/Safari)
+  const attempts = [
+    {audio:{echoCancellation:document.getElementById('echoCx').checked, noiseSuppression:document.getElementById('noiseCx').checked, autoGainControl:document.getElementById('agcCx').checked, channelCount:{ideal:1}, sampleRate:{ideal:44100}}, video:false},
+    {audio:{echoCancellation:false}, video:false},
+    {audio:true, video:false}
+  ];
+  let lastErr=null;
+  for(const c of attempts){
+    try { stream=await navigator.mediaDevices.getUserMedia(c); lastErr=null; break; }
+    catch(e){ lastErr=e; }
+  }
+  if (!stream) {
+    nd.master.gain.setValueAtTime(0.9, ctx.currentTime); // restore if failed
+    const n=lastErr?.name||'';
+    throw new Error(
+      n==='NotAllowedError'  ? '🔒 Mic blocked. Tap "🎙 ALLOW MICROPHONE" first, then tap Start.' :
+      n==='NotFoundError'    ? '🎙 No microphone found on this device.' :
+      n==='NotReadableError' ? '⚠️ Mic in use by another app. Close it and retry.' :
+      '⚠️ '+(lastErr?.message||'Could not access microphone.')
+    );
+  }
+
+  src = ctx.createMediaStreamSource(stream);
+  connectAll();
+  latTxt = Math.round(((ctx.baseLatency||0)+(ctx.outputLatency||0))*1000)+' ms';
+  await applyOutput();
+  live=true;
+  startVU();
+  grabWakeLock();
+
+  // Fade in after 700ms — enough time for BT beep to finish and mic buffer to clear
+  await sleep(700);
+  const targetVol = parseFloat(document.getElementById('outGain').value) / 100;
+  nd.master.gain.setTargetAtTime(targetVol, ctx.currentTime, 0.08);
+}
+
+async function stopStream() {
+  live=false;
+  cancelAnimationFrame(raf);
+  // Fade out first to avoid click/pop on disconnect
+  if (ctx && nd.master) {
+    nd.master.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+    await sleep(150);
+  }
+  disconnectAll();
+  stream?.getTracks().forEach(t=>t.stop());
+  stream=null; src=null;
+  if(ctx) await ctx.suspend();
+  resetVU();
+  if(wl){ try{wl.release();}catch(e){} wl=null; }
+}
+
+async function restartIfLive(){ if(live){ await stopStream(); await sleep(300); await startStream(); } }
+
+// ── TOGGLE ───────────────────────────────────────────────────────
+async function toggle() {
+  const btn=document.getElementById('mainBtn');
+  const lbl=document.getElementById('btnLabel');
+  hideToast();
+  if (live) {
+    await stopStream();
+    btn.className=''; lbl.innerHTML='TAP TO<br>START';
+    setSt('idle','Idle'); document.getElementById('latV').textContent='--';
+  } else {
+    btn.disabled=true; lbl.innerHTML='STARTING…'; setSt('','Starting');
+    try {
+      await startStream();
+      btn.className='running'; btn.disabled=false;
+      lbl.innerHTML='● LIVE<br>TAP STOP';
+      setSt('on','Live'); document.getElementById('latV').textContent=latTxt;
+    } catch(e) {
+      btn.className='err'; btn.disabled=false;
+      lbl.innerHTML='ERROR<br>RETRY';
+      setSt('err','Error'); showToast(e.message||'Error starting mic.');
+      if((e.message||'').includes('blocked')||(e.message||'').includes('ALLOW')) {
+        document.getElementById('permCard').style.display='block';
+        applyPermState('prompt');
+      }
+    }
+  }
+}
+
+function setSt(t,txt){
+  const dot=document.getElementById('dot'), s=document.getElementById('stxt');
+  dot.className='dot'+(t==='on'?' on':t==='err'?' err':'');
+  s.textContent=txt;
+}
+
+// ── OUTPUT DEVICE ────────────────────────────────────────────────
+async function scanDevices() {
+  const sel=document.getElementById('outSel'), note=document.getElementById('dnote');
+  try {
+    let ts=null;
+    if(!stream) try{ts=await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){}
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const outs=devs.filter(d=>d.kind==='audiooutput');
+    sel.innerHTML='<option value="">System Default</option>';
+    outs.forEach(d=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||`Speaker ${d.deviceId.slice(0,6)}`; sel.appendChild(o); });
+    ts?.getTracks().forEach(t=>t.stop());
+    note.textContent=outs.length?`✅ Found ${outs.length} output(s). Select your Bluetooth speaker.`:'⚠️ No named devices. Connect BT speaker first.';
+  } catch(e){ note.textContent='⚠️ Device scan not supported in this browser.'; }
+}
+
+async function applyOutput() {
+  const sel=document.getElementById('outSel');
+  const id=sel.value;
+  const lbl=sel.options[sel.selectedIndex]?.text||'Default';
+  document.getElementById('outV').textContent=lbl.length>12?lbl.slice(0,12)+'…':lbl;
+  if(id&&ctx&&typeof ctx.setSinkId==='function') try{await ctx.setSinkId(id);}catch(e){}
+}
+document.getElementById('outSel').addEventListener('change',()=>{ if(live)applyOutput(); });
+
+// ── VU METER ─────────────────────────────────────────────────────
+function startVU() {
+  const bi=new Float32Array(nd.anaIn.fftSize), bo=new Float32Array(nd.anaOut.fftSize);
+  function frame() {
+    if(!live)return;
+    raf=requestAnimationFrame(frame);
+    nd.anaIn.getFloatTimeDomainData(bi); nd.anaOut.getFloatTimeDomainData(bo);
+    const ri=rms(bi), ro=rms(bo);
+    const di=ri>1e-5?20*Math.log10(ri):-80, doo=ro>1e-5?20*Math.log10(ro):-80;
+    const pi=Math.max(0,Math.min(100,(di+60)/60*100));
+    const po=Math.max(0,Math.min(100,(doo+60)/60*100));
+    document.getElementById('vuIn').style.width=pi+'%';
+    document.getElementById('vuOut').style.width=po+'%';
+    document.getElementById('dbIn').textContent=(di>-79?di.toFixed(1):'—')+' dB';
+    document.getElementById('dbOut').textContent=(doo>-79?doo.toFixed(1):'—')+' dB';
+  }
+  frame();
+}
+function rms(b){ let s=0; for(let i=0;i<b.length;i++)s+=b[i]*b[i]; return Math.sqrt(s/b.length); }
+function resetVU(){ document.getElementById('vuIn').style.width='0%'; document.getElementById('vuOut').style.width='0%'; document.getElementById('dbIn').textContent='— dB'; document.getElementById('dbOut').textContent='— dB'; }
+
+// ── CONTROLS ──────────────────────────────────────────────────────
+function setGain(el,which) {
+  const v=parseFloat(el.value)/100;
+  document.getElementById(which==='in'?'inGainV':'outGainV').textContent=v.toFixed(2)+'×';
+  const node=which==='in'?nd.inGain:nd.master;
+  if(ctx&&node) node.gain.setTargetAtTime(v,ctx.currentTime,0.01);
+}
+function setEQ(el,band) {
+  const v=parseFloat(el.value);
+  document.getElementById('eq'+band+'v').textContent=(v>0?'+':'')+v+'dB';
+  const map={B:nd.eqB,M:nd.eqM,H:nd.eqH};
+  if(ctx&&map[band]) map[band].gain.setTargetAtTime(v,ctx.currentTime,0.01);
+}
+function applyComp() {
+  const on=document.getElementById('compOn').checked;
+  const thr=parseFloat(document.getElementById('compThr').value);
+  document.getElementById('compThrV').textContent=thr+'dB';
+  if(ctx&&nd.comp){ nd.comp.ratio.setTargetAtTime(on?4:1,ctx.currentTime,0.01); nd.comp.threshold.setTargetAtTime(thr,ctx.currentTime,0.01); }
+}
+function applyGate() {
+  const on=document.getElementById('gateOn').checked;
+  const raw=parseFloat(document.getElementById('gateThr').value);
+  document.getElementById('gateThrV').textContent=raw+'%';
+  if(ctx&&nd.gate&&wkLoaded&&nd.gate.parameters) {
+    const tp=nd.gate.parameters.get('thr');
+    if(tp) tp.setTargetAtTime(on?raw/100:0,ctx.currentTime,0.01);
+  }
+}
+function setWet(el) {
+  const v=parseFloat(el.value)/100;
+  document.getElementById('wetV').textContent=el.value+'%';
+  if(ctx&&nd.wetRet){ nd.wetRet.gain.setTargetAtTime(v,ctx.currentTime,0.01); nd.dry.gain.setTargetAtTime(1-v*0.5,ctx.currentTime,0.01); }
+}
+
+// ── EFFECTS ──────────────────────────────────────────────────────
+const FX_NAMES={clean:'Clean Monitor',studio:'Studio Reverb',hall:'Concert Hall',room:'Small Room',cathedral:'Cathedral',echo:'Echo & Delay',telephone:'Telephone',megaphone:'Megaphone',robot:'Robot Voice',lofi:'Lo-Fi Crush'};
+const FX_PARAMS={
+  echo:     [{id:'dtime',lbl:'Delay Time',min:50,max:800,val:350,unit:'ms'},{id:'dfb',lbl:'Feedback',min:0,max:88,val:45,unit:'%'}],
+  robot:    [{id:'rfreq',lbl:'Frequency',min:10,max:300,val:60,unit:'Hz'}],
+  lofi:     [{id:'lbits',lbl:'Bit Depth',min:2,max:12,val:6,unit:'bit'},{id:'lred',lbl:'Sample Red.',min:1,max:16,val:4,unit:'x'}],
+  megaphone:[{id:'mdrive',lbl:'Drive',min:20,max:200,val:100,unit:'%'}],
+};
+
+function pickFX(btn) {
+  document.querySelectorAll('.fxb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const fx=btn.dataset.fx;
+  if(live){
+    try{nd.wetSend.disconnect();}catch(e){}
+    try{nd.fxIn.disconnect();}catch(e){}
+    try{nd.fxOut.disconnect();}catch(e){}
+  }
+  buildFXGraph(fx);
+  if(live){ nd.wetSend.connect(nd.fxIn); nd.fxOut.connect(nd.wetRet); }
+  renderFXParams(fx);
+}
+
+function renderFXParams(fx) {
+  const panel=document.getElementById('fxParams');
+  const body=document.getElementById('fxParamsBody');
+  const lbl=document.getElementById('fxParamsLbl');
+  const defs=FX_PARAMS[fx];
+  lbl.textContent=FX_NAMES[fx]||fx;
+  if(!defs){ panel.className='card'; panel.style.display='none'; return; }
+  body.innerHTML='';
+  defs.forEach(p=>{
+    const row=document.createElement('div'); row.className='srow2'; row.style.marginBottom='9px';
+    row.innerHTML=`<div class="slbl" style="font-size:11px">${p.lbl}</div><input type="range" id="${p.id}" min="${p.min}" max="${p.max}" value="${p.val}" oninput="fxParam('${p.id}',this.value,'${p.unit}')"><div class="sval" id="${p.id}V">${p.val}${p.unit}</div>`;
+    body.appendChild(row);
+  });
+  panel.style.display='block';
+}
+
+function fxParam(id,raw,unit) {
+  const v=parseFloat(raw);
+  document.getElementById(id+'V').textContent=v+unit;
+  if(!ctx)return;
+  if(id==='dtime'&&nd._delay) nd._delay.delayTime.setTargetAtTime(v/1000,ctx.currentTime,0.01);
+  if(id==='dfb'&&nd._fb)      nd._fb.gain.setTargetAtTime(v/100,ctx.currentTime,0.01);
+  if(id==='rfreq'&&nd._osc)   nd._osc.frequency.setTargetAtTime(v,ctx.currentTime,0.01);
+  if(id==='lbits'&&nd._crush) nd._crush.parameters.get('bits').setTargetAtTime(v,ctx.currentTime,0.01);
+  if(id==='lred'&&nd._crush)  nd._crush.parameters.get('red').setTargetAtTime(v,ctx.currentTime,0.01);
+}
+
+// ── COLLAPSIBLE ───────────────────────────────────────────────────
+function toggleColl(h){ h.classList.toggle('open'); h.nextElementSibling.classList.toggle('open'); }
+
+// ── TOAST ──────────────────────────────────────────────────────────
+function showToast(msg){ const t=document.getElementById('toast'); t.innerHTML=msg.replace(/\n/g,'<br>'); t.className='show'; }
+function hideToast(){ document.getElementById('toast').className=''; }
+</script>
+</body>
+</html>
