@@ -519,6 +519,7 @@ function buildGraph() {
   nd.lim.attack.value=0.001; nd.lim.release.value=0.05;
   nd.anaIn    = mkAna(); nd.anaOut = mkAna();
   buildFXGraph('clean');
+  watchDeviceChanges();
 }
 
 function mkGain(v=1){ const g=ctx.createGain(); g.gain.value=v; return g; }
@@ -646,11 +647,45 @@ async function buildIRs() {
 }
 
 // ── STREAM START/STOP ────────────────────────────────────────────
+let deviceChangeDebounce = null;
+
+// Watch for BT connect/disconnect events
+function watchDeviceChanges() {
+  if (!navigator.mediaDevices) return;
+  navigator.mediaDevices.addEventListener('devicechange', () => {
+    // Debounce — BT reconnect fires multiple events in quick succession
+    clearTimeout(deviceChangeDebounce);
+    deviceChangeDebounce = setTimeout(async () => {
+      if (!live) return;
+      // Silently restart to pick up new device routing
+      showToast('🔄 Audio device changed — reconnecting…');
+      try {
+        await stopStream();
+        // Wait 800ms for BT to fully settle and stop its beep sounds
+        await sleep(800);
+        await startStream();
+        hideToast();
+      } catch(e) {
+        showToast('⚠️ Reconnect failed: ' + (e.message||'Try stopping and starting again.'));
+        const btn=document.getElementById('mainBtn');
+        btn.className='err';
+        document.getElementById('btnLabel').innerHTML='ERROR<br>RETRY';
+        setSt('err','Error');
+      }
+    }, 600);
+  });
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
 async function startStream() {
   await initCtx();
   if (ctx.state==='suspended') await ctx.resume();
 
-  // 3-stage fallback: never use latency constraint (breaks mobile Chrome/Safari)
+  // Mute output immediately — prevents BT connection beep from looping back
+  nd.master.gain.setValueAtTime(0, ctx.currentTime);
+
+  // 3-stage fallback — never use latency constraint (breaks mobile Chrome/Safari)
   const attempts = [
     {audio:{echoCancellation:document.getElementById('echoCx').checked, noiseSuppression:document.getElementById('noiseCx').checked, autoGainControl:document.getElementById('agcCx').checked, channelCount:{ideal:1}, sampleRate:{ideal:44100}}, video:false},
     {audio:{echoCancellation:false}, video:false},
@@ -662,6 +697,7 @@ async function startStream() {
     catch(e){ lastErr=e; }
   }
   if (!stream) {
+    nd.master.gain.setValueAtTime(0.9, ctx.currentTime); // restore if failed
     const n=lastErr?.name||'';
     throw new Error(
       n==='NotAllowedError'  ? '🔒 Mic blocked. Tap "🎙 ALLOW MICROPHONE" first, then tap Start.' :
@@ -678,11 +714,21 @@ async function startStream() {
   live=true;
   startVU();
   grabWakeLock();
+
+  // Fade in after 700ms — enough time for BT beep to finish and mic buffer to clear
+  await sleep(700);
+  const targetVol = parseFloat(document.getElementById('outGain').value) / 100;
+  nd.master.gain.setTargetAtTime(targetVol, ctx.currentTime, 0.08);
 }
 
 async function stopStream() {
   live=false;
   cancelAnimationFrame(raf);
+  // Fade out first to avoid click/pop on disconnect
+  if (ctx && nd.master) {
+    nd.master.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+    await sleep(150);
+  }
   disconnectAll();
   stream?.getTracks().forEach(t=>t.stop());
   stream=null; src=null;
@@ -691,7 +737,7 @@ async function stopStream() {
   if(wl){ try{wl.release();}catch(e){} wl=null; }
 }
 
-async function restartIfLive(){ if(live){ await stopStream(); await startStream(); } }
+async function restartIfLive(){ if(live){ await stopStream(); await sleep(300); await startStream(); } }
 
 // ── TOGGLE ───────────────────────────────────────────────────────
 async function toggle() {
@@ -713,7 +759,6 @@ async function toggle() {
       btn.className='err'; btn.disabled=false;
       lbl.innerHTML='ERROR<br>RETRY';
       setSt('err','Error'); showToast(e.message||'Error starting mic.');
-      // If it's a permission error, re-show the permission card
       if((e.message||'').includes('blocked')||(e.message||'').includes('ALLOW')) {
         document.getElementById('permCard').style.display='block';
         applyPermState('prompt');
